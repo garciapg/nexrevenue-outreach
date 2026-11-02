@@ -18,6 +18,10 @@ BANNED = re.compile(r"\b(impressive|amazing|incredible|awesome|love what|game[- 
                     r"synergy|circle back|touch base|no[- ]brainer)\b", re.I)
 
 
+BAD_FE = re.compile(r"(?<![A-Za-z])(fe|Fe)(?![A-Za-z])")   # we write FEX (or FE), never "fe"
+ADDRESS = re.compile(r"\b[A-Z]{2}\s+\d{5}\b")
+
+
 def rule_issues(lead: dict, ctx) -> list[str]:
     issues = []
     line = lead.get("first_line") or ""
@@ -31,6 +35,8 @@ def rule_issues(lead: dict, ctx) -> list[str]:
     for field in ("first_line", "ps_line", "subject"):
         if lead.get(field) and BANNED.search(lead[field]):
             issues.append(f"banned phrase in {field}")
+        if lead.get(field) and BAD_FE.search(lead[field]):
+            issues.append(f"write FEX, not fe, in {field}")
     steps = sequence(ctx.cfg, lead.get("segment") or "agency")
     if not steps:
         issues.append("no sequence for segment")
@@ -38,8 +44,10 @@ def rule_issues(lead: dict, ctx) -> list[str]:
     subject, body = render_step(lead, ctx.cfg, steps[0]["template"])
     if "{{" in body or (subject and "{{" in subject):
         issues.append("unfilled template variable")
-    if "NexRevenue," not in body.split("\n")[-1]:
-        issues.append("missing footer address (set BUSINESS_ADDRESS)")
+    if BAD_FE.search(body):
+        issues.append("write FEX, not fe, in the email")
+    if not ADDRESS.search(body):
+        issues.append("missing business address (signature or BUSINESS_ADDRESS)")
     if not lead.get("email"):
         issues.append("no email")
     return issues

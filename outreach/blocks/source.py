@@ -29,6 +29,7 @@ ALIASES = {
     "notes": ["notes", "note"],
     "sponsored": ["sponsored", "is_sponsored", "ad"],
 }
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,24}")
 STATE_RE = re.compile(r",\s*([A-Z]{2})\s*\d{5}")
 
 
@@ -55,7 +56,11 @@ def normalize_row(row: dict) -> dict:
     if email.lower().startswith(("http", "www.")):   # Maps exports put the website in "Email"
         lead["website"] = lead["website"] or email
         email = ""
-    lead["email"] = email.split(",")[0].strip().lower() if "@" in email else None
+    found = EMAIL_RE.findall(email) if "@" in email else []
+    found = list(dict.fromkeys(e.lower() for e in found))
+    lead["email"] = found[0] if found else None
+    if len(found) > 1:                                  # "a@x.com, b@x.com": keep every address
+        lead["data"] = {"extra_emails": found[1:]}
     lead["website"] = normalize_url(lead.get("website"))
     lead["domain"] = domain_of(lead["website"])
     lead["phone"] = clean_phone(lead.get("phone", ""))

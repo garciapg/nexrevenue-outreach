@@ -96,12 +96,16 @@ def test_full_cycle(env):
 
     # ---- draft ------------------------------------------------------------
     out = run_job("draft", cfg, repo, clients=c)
-    assert out["counts"]["send"]["drafted"] == 2
+    assert out["counts"]["send"]["drafted"] == 2, out["errors"]
     by = leads_by_name(repo)
     agency = by["Insure Final Expense"]
     draft = gmail.drafts[agency["draft_id"]]
     assert "Hi Maria," in draft["_body"] and "is hiring final expense agents" in draft["_body"]
-    assert "123 Test St, Orlando" in draft["_body"] and "{{" not in draft["_body"]
+    assert "1505 Brentwood Dr, Kissimmee, FL 34746" in draft["_body"] and "{{" not in draft["_body"]
+    assert "123 Test St" not in draft["_body"]            # the signature already carries the address
+    assert "seniorcoverageamerica.com" in draft["_body"]
+    assert draft["_html"] and 'href="https://seniorcoverageamerica' not in draft["_html"]   # URL stays plain text
+    assert "Senior Media Buyer" in draft["_html"] and "googleusercontent" in draft["_html"]
     subj = next(h["value"] for h in draft["payload"]["headers"] if h["name"] == "Subject")
     assert subj == "Insure Final Expense new agents"
 

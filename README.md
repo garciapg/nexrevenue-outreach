@@ -31,6 +31,10 @@ that buy FE calls, leads or live transfers, RTB first).
 - Send: open Gmail drafts each morning and press Send. The system notices and schedules follow-ups.
 - Watch: replies are sorted, follow-ups stop, warm replies get a drafted answer and an alert email.
   Everything shows in GHL and the **Dashboard** tab.
+- Contacts: put several emails in the Inbox Email cell (comma separated) or let the site crawl find them: each
+  person gets their own email, spaced out. Change this in `pipeline.yaml` (`blocks.enrich.max_contacts`).
+- Signature and brand URL: edit `templates/signature.txt`, `templates/signature.html` and `owner.funnel_url`;
+  then run job `redraft` to rebuild drafts that are still waiting.
 - Call: `python -m outreach run calls` (or `/call-list`) builds the **Call List** tab: owner verified,
   phone confirmed, strongest first. Rules and the owner name ladder: docs/CALL_LIST.md.
 

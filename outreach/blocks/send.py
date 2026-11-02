@@ -7,7 +7,7 @@ Input: approved (step 1), sent with a due next step  Output: drafted (or sent), 
 from __future__ import annotations
 
 from .. import statuses as S
-from ..render import render_step, sequence
+from ..render import render_email, sequence
 from ..timeutil import add_business_days, in_business_hours, local_midnight_utc, now_utc
 
 
@@ -20,7 +20,7 @@ def _subject(lead: dict, step: dict, rendered_subject: str | None) -> str:
 
 def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
     gmail = ctx.client("gmail")
-    rendered_subject, body = render_step(lead, ctx.cfg, step["template"])
+    rendered_subject, body, html = render_email(lead, ctx.cfg, step["template"])
     subject = _subject(lead, step, rendered_subject)
     follow_up = step["step"] > 1
     thread = lead.get("gmail_thread_id") if follow_up else None
@@ -29,7 +29,7 @@ def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
         print(f"[dry-run] send: {provider} step {step['step']} to {lead['email']}: {subject}")
         return
     if provider == "gmail_auto":
-        out = gmail.send(lead["email"], subject, body, thread, reply_to)
+        out = gmail.send(lead["email"], subject, body, thread, reply_to, html)
         nxt = _next_step(ctx, lead, step["step"])
         ctx.repo.add_message(lead["id"], "out", "sent", step=step["step"], gmail_id=out["message_id"],
                              thread_id=out["thread_id"], subject=subject, body=body)
@@ -40,7 +40,7 @@ def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
             "next_action_at": add_business_days(now_utc(), nxt["day"]) if nxt else now_utc(), "draft_id": None},
             detail={"step": step["step"], "subject": subject})
         return
-    out = gmail.create_draft(lead["email"], subject, body, thread, reply_to)
+    out = gmail.create_draft(lead["email"], subject, body, thread, reply_to, html)
     ctx.repo.add_message(lead["id"], "out", "draft", step=step["step"], gmail_id=out["message_id"],
                          thread_id=out["thread_id"], subject=subject, body=body)
     ctx.move(lead, "send", "draft_created", S.DRAFTED, provider=provider, changes={
@@ -73,11 +73,20 @@ def run(ctx, cfg: dict) -> dict:
 
     # 2) follow-ups first (they keep threads alive), then new leads, best fit first
     due = ctx.repo.leads([S.SENT], limit=200, where="next_action_at <= now()", order="next_action_at")
-    new = ctx.repo.leads([S.APPROVED], limit=200, order="fit_score desc nulls last, created_at")
+    # Several contacts at one company get spaced out: no new first email while a colleague's draft is waiting
+    # or was sent less than contact_gap_days ago.
+    gap = int(cfg.get("contact_gap_days", 2))
+    new = ctx.repo.leads([S.APPROVED], limit=200, order="fit_score desc nulls last, created_at", where=(
+        "(domain is null or not exists (select 1 from outreach.leads o where o.domain = leads.domain "
+        "and o.id <> leads.id and (o.status = 'drafted' or o.sent_at > now() - make_interval(days => %s))))"),
+        params=(gap,))
+    drafted_domains: set[str] = set()
     for lead in due + new:
         if room <= 0:
             counts["capped"] = True
             break
+        if lead["status"] == S.APPROVED and gap > 0 and lead.get("domain") in drafted_domains:
+            continue                       # a colleague at this company already got a first email today
         step = _next_step(ctx, lead, int(lead.get("step") or 0)) if lead["status"] == S.SENT else \
             next(iter(sequence(ctx.cfg, lead.get("segment") or "agency")), None)
         if not step:
@@ -89,6 +98,8 @@ def run(ctx, cfg: dict) -> dict:
             continue
         try:
             _deliver(ctx, cfg, lead, step, provider)
+            if lead.get("domain"):
+                drafted_domains.add(lead["domain"])
             counts["drafted"] += 1
             room -= 1
         except Exception as e:

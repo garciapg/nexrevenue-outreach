@@ -2,6 +2,7 @@
 
 One line per change: date, what changed, why. Newest first.
 
+- 2026-11-02: FEX wording (never "fe", QA blocks it; prompt personalize.v2), brand site shown as plain text (owner.funnel_url, no hyperlink), your Gmail signature on every email (templates/signature.txt + signature.html, sent as an HTML email with a plain text copy; the address in it satisfies the footer rule), several contacts per company (enrich.max_contacts, each person is their own lead, spaced by send.contact_gap_days, a reply or opt-out holds the rest of the company), `redraft` job to rebuild waiting drafts, migration 002, workflow applies migrations before each run.
 - 2026-11-02: Filled ghl: in pipeline.yaml with the Outreach pipeline id, stage ids and NR custom field ids from ghl-setup, so GHL sync can create opportunities and fill fields. Also set owner.booking_link to the FEX agent roadmap call calendar.
 - 2026-11-02: Cold call list. New owner block (licence > BBB > website > reviews ladder, strict match rules, phone confirmed on a second source), call_list block (review caps, must_sell, franchise/solar skip, phone+domain dedupe, listing farm detection, strongest first) and `calls` job. Research now saves site phones; Sponsored Maps rows are skipped. Why: owner direct cold calling.
 - 2026-11-01: Applied migration 001 to the Lead distribution Supabase project and updated SETUP.md to point there (free plan allows only 2 active projects).

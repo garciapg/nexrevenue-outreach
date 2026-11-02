@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job or block(s): intake, write, draft, watch, report, calls, or e.g. 'qualify personalize'"
+        description: "Job or block(s): intake, write, draft, watch, report, calls, redraft, or e.g. 'qualify personalize'"
         required: true
         default: watch
       dry_run:
@@ -48,6 +48,10 @@ jobs:
             *) JOB="${{ github.event.inputs.job }}" ;;
           esac
           echo "job=$JOB" >> "$GITHUB_OUTPUT"
+      - name: Apply database migrations (safe to repeat)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m outreach migrate
       - name: Run
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
