@@ -1,0 +1,105 @@
+# NexRevenue Outreach OS: the one file you edit to change how the system runs.
+# Blocks never call each other. Each picks up leads in its input status and moves
+# them to the next one, so you can swap providers or reorder jobs safely.
+# Every change to this file is a git commit: say what you changed in CHANGELOG.md.
+
+owner:
+  name: Pablo
+  company: NexRevenue
+  email: pablo@nexrevenue.com            # Gmail account that holds drafts and sends
+  booking_link: ""                       # GHL calendar link, used in reply drafts
+  address_env: BUSINESS_ADDRESS          # footer address comes from this env var / secret
+
+dry_run: false                           # true = run everything, write nothing, email nothing
+paused: false                            # true = no drafts are created (also: /pause)
+timezone: America/New_York
+
+llm:
+  provider: claude_code                  # claude_code (your subscription) | anthropic_api | fake
+  models:                                # aliases understood by Claude Code
+    cheap: haiku
+    writer: sonnet
+    strategist: opus
+
+segments:
+  agency:
+    label: Final expense agencies and IMOs
+    sequence: [                          # day = days after the previous email was SENT
+      {step: 1, template: agency/email1.md, day: 0},
+      {step: 2, template: agency/email2.md, day: 3},
+      {step: 3, template: agency/email3.md, day: 5}
+    ]
+  buyer:
+    label: Platforms buying FE calls, leads or live transfers (RTB first)
+    sequence: [
+      {step: 1, template: buyer/email1.md, day: 0},
+      {step: 2, template: buyer/email2.md, day: 4},
+      {step: 3, template: buyer/email3.md, day: 6}
+    ]
+
+blocks:
+  source:
+    provider: sheet_inbox                # sheet_inbox | csv_import  (maps_kit, apify: phase 2)
+  research:
+    provider: site_crawl
+    max_pages: 4                         # home + contact + about + careers
+    batch: 40
+  qualify:
+    provider: claude                     # claude | rules
+    model: cheap
+    batch: 40
+    per_call: 8                          # leads per model call (saves your Pro limits)
+    keep_score: 60
+  enrich:
+    provider: site_emails                # site_emails (free) | (phase 3: scout, apollo, prospeo)
+    batch: 60
+  verify:
+    provider: mx_only                    # mx_only (free) | email_sleuth (needs port 25) | millionverifier
+    batch: 60
+  personalize:
+    provider: claude
+    model: writer
+    batch: 20                            # Sonnet only for leads that passed everything else
+    per_call: 5
+  qa:
+    provider: rules_plus_claude
+    model: cheap
+  approve:
+    auto_approve_score: 80               # leads at or above this skip the Review tab
+    require_review_first_days: 0
+  send:
+    provider: gmail_drafts               # gmail_drafts | gmail_auto | (phase 3: instantly)
+    daily_cap: 20
+    business_hours: [9, 17]
+  sent_detect:
+    provider: gmail
+  replies:
+    provider: gmail_inbox
+    model: cheap
+  crm:
+    provider: ghl                        # ghl | none
+  report:
+    provider: sheet_dashboard
+    summary_email: true
+
+jobs:                                    # what each scheduled run executes, in order
+  intake:  [source, research, qualify, enrich, verify]
+  write:   [personalize, qa, approve]
+  draft:   [send]
+  watch:   [sent_detect, replies, crm]
+  report:  [crm, report]
+
+sheet:
+  id_env: SHEET_ID
+  tabs:
+    inbox: Inbox
+    leads: Leads
+    review: Review
+    dashboard: Dashboard
+    dnc: Do Not Contact
+
+ghl:
+  location_id: yRvntfmrpk3WWntrxprP
+  pipeline_id: ""                        # fill with: python -m outreach ghl-setup
+  stages: {}                             # status -> stage id, filled by ghl-setup
+  tag_prefix: "nr-"

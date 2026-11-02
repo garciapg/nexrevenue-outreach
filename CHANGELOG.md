@@ -1,0 +1,8 @@
+# Changelog
+
+One line per change: date, what changed, why. Newest first.
+
+- 2026-11-01: v1.0.0 Phase 1. Blocks: source (Sheet Inbox, CSV import), research (site crawl), qualify (Haiku),
+  enrich (site emails), verify (MX), personalize (Sonnet), QA (rules + Haiku fact check), approve (auto >= 80,
+  Review tab), send (Gmail drafts), sent detection, replies (Haiku + answer drafts + alerts), GHL sync, report
+  (Leads/Dashboard tabs + daily email). GitHub Actions schedules. Segments: agency, buyer.

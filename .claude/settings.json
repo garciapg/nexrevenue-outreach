@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m outreach:*)",
+      "Bash(py -m outreach:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(py -m pytest:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}
