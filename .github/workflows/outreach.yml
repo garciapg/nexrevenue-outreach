@@ -3,6 +3,7 @@ name: outreach
 # Times are UTC. ET = UTC-5 in winter (UTC-4 in summer), so these run about an hour later in summer.
 on:
   schedule:
+    - cron: "0 7 * * *"         # leadgen ~2:00am ET daily (Google Maps)
     - cron: "0 11 * * 1-5"      # intake  ~6:00am ET weekdays
     - cron: "30 11 * * 1-5"     # write   ~6:30am ET weekdays
     - cron: "0 12 * * 1-5"      # draft   ~7:00am ET weekdays
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job or block(s): intake, write, draft, watch, report, calls, redraft, or e.g. 'qualify personalize'"
+        description: "Job or block(s): intake, write, draft, watch, report, calls, redraft, leadgen, or e.g. 'qualify personalize'"
         required: true
         default: watch
       dry_run:
@@ -26,7 +27,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,6 +41,7 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
+            "0 7 * * *") JOB=leadgen ;;
             "0 11 * * 1-5") JOB=intake ;;
             "30 11 * * 1-5") JOB=write ;;
             "0 12 * * 1-5") JOB=draft ;;
@@ -48,6 +50,13 @@ jobs:
             *) JOB="${{ github.event.inputs.job }}" ;;
           esac
           echo "job=$JOB" >> "$GITHUB_OUTPUT"
+      - name: Start the Google Maps Scraper Kit (leadgen only)
+        if: contains(steps.pick.outputs.job, 'leadgen') || contains(steps.pick.outputs.job, 'maps')
+        run: |
+          # MIT licensed, pinned to a reviewed commit. Its output names businesses, so it is not printed.
+          git clone -q https://github.com/Mahanaicoach/google-maps-scraper-kit.git ../google-maps-scraper-kit
+          git -C ../google-maps-scraper-kit checkout -q 15dd80b584dfeab550271ba383b540af8f44d1d2
+          cd ../google-maps-scraper-kit && python scripts/engine.py start
       - name: Apply database migrations (safe to repeat)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

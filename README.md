@@ -24,7 +24,8 @@ that buy FE calls, leads or live transfers, RTB first).
 
 ## Use it
 
-- Add leads: paste rows in the Sheet **Inbox** tab (any Google Maps export works), drop a CSV in
+- Leads come in by themselves every night from Google Maps (job `leadgen`, see docs/SOURCING.md).
+- Add leads by hand: paste rows in the Sheet **Inbox** tab (any Google Maps export works), drop a CSV in
   `imports/`, or ask Claude Code `/add-leads buyer "pay per call networks buying final expense calls"`.
 - Approve: leads scoring 80+ that pass QA are approved automatically. Others land in the **Review** tab:
   type `approve` or `drop` in the Decision column.

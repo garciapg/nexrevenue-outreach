@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 
 from .. import statuses as S
+from ..log import lead_line
 
 SYNC_FROM = [S.APPROVED, S.REVIEW, S.DRAFTED, S.SENT, S.REPLIED, S.COMPLETED, S.BOUNCED, S.UNSUBSCRIBED,
              S.MEETING_BOOKED, S.CLIENT, S.LOST]
@@ -22,7 +23,8 @@ def fields_for(lead: dict) -> dict:
             "nr_calls_made": lead.get("calls_made"), "nr_last_touch": lead.get("last_touch_at"),
             "nr_next_action": lead.get("next_action_at"), "nr_reply_category": lead.get("reply_category"),
             "nr_buys_via": lead.get("buys_via"), "nr_first_line": lead.get("first_line"),
-            "nr_call_brief": lead.get("call_brief"), "nr_lead_id": str(lead["id"])}
+            "nr_call_brief": lead.get("call_brief"), "nr_lead_id": str(lead["id"]),
+            "nr_socials": " | ".join(((lead.get("data") or {}).get("socials") or {}).values()) or None}
 
 
 def run(ctx, cfg: dict) -> dict:
@@ -39,7 +41,7 @@ def run(ctx, cfg: dict) -> dict:
     for lead in leads:
         try:
             if ctx.dry_run:
-                print(f"[dry-run] crm: would sync {lead['business_name']} ({lead['status']})")
+                lead_line("crm", lead, f"would sync ({lead['status']})")
                 continue
             tags = [f"{prefix}outreach", f"{prefix}{lead.get('segment')}", f"{prefix}{lead['status']}"]
             if lead.get("buys_via") == "rtb":

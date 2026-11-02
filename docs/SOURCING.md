@@ -10,6 +10,27 @@ blocks:
     also: [csv_import]
 ```
 
+## 0. Automatic: nightly lead gen (job `leadgen`, runs by itself at ~2am ET)
+
+The workflow clones the Google Maps Scraper Kit (MIT, pinned commit) on GitHub's runner, starts its
+headless engine and runs `blocks.maps` in `pipeline.yaml`: `per_run` keyword x city searches a night,
+cities in the listed order (FL and TX first), each search remembered in `outreach.coverage` and repeated
+only after `rescan_days`. Every search asks Google for `hl=en&gl=us` (`--lang en --country us`).
+
+What happens to each Maps row, cheapest step first:
+1. Skipped before import: outside 10 to 300 reviews, Maps category without "insurance", no street
+   address, no website, or a captive / franchise / solar word (`skip_words`).
+2. Imported as `new` with its socials (Instagram, Facebook, LinkedIn, TikTok, YouTube, X from the site)
+   and up to 3 review texts. Duplicates by domain, email or phone are skipped.
+3. `research` reads the site, `owner` runs the owner ladder (website statement, BBB, review names,
+   licence CSVs), `qualify` (Haiku) keeps only agencies that really sell FEX, `enrich` picks emails
+   (site, Maps, then public Instagram / TikTok bios), `verify` checks the domain takes mail.
+4. Next morning the normal `write` and `draft` jobs turn them into drafts.
+
+Change cities, keywords or volume in `blocks.maps`. If Google rate-limits the runner, the kit stops that
+search and keeps what it found; the search stays due and runs again the next night. Owner email guessing
+(first.last@) is off on purpose: GitHub runners block the SMTP port that verifying a guess needs.
+
 ## 1. Google Maps Scraper Kit (free, open source, on your computer)
 
 Best for segment `agency` (local FE agencies, whole US, city by city).
