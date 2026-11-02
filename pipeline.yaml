@@ -7,7 +7,7 @@ owner:
   name: Pablo
   company: NexRevenue
   email: pablo@nexrevenue.com            # Gmail account that holds drafts and sends
-  booking_link: ""                       # GHL calendar link, used in reply drafts
+  booking_link: "https://link.blackumbrella.app/widget/bookings/fex-agent-roadmap-call"   # GHL calendar link, used in reply drafts
   address_env: BUSINESS_ADDRESS          # footer address comes from this env var / secret
 
 dry_run: false                           # true = run everything, write nothing, email nothing
