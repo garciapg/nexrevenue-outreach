@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import email
+import email.policy
 import itertools
 import json
 import re
@@ -55,7 +56,7 @@ class FakeSheets:
 
 
 def _decode(raw):
-    return email.message_from_bytes(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    return email.message_from_bytes(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)), policy=email.policy.default)
 
 
 class FakeGmail:
@@ -71,16 +72,21 @@ class FakeGmail:
         thread_id = thread_id or f"t{next(_ids)}"
         headers = [{"name": k, "value": v} for k, v in parsed.items()]
         headers.append({"name": "Message-ID", "value": f"<{mid}@mail.gmail.com>"})
-        body = parsed.get_payload(decode=True).decode()
+        body = parsed.get_body(preferencelist=("plain",)).get_content()
+        html = parsed.get_body(preferencelist=("html",))
         msg = {"id": mid, "threadId": thread_id, "labelIds": labels, "internalDate": "1767225600000",
                "payload": {"mimeType": "text/plain", "headers": headers,
                            "body": {"data": base64.urlsafe_b64encode(body.encode()).decode()}},
-               "snippet": body[:100], "_to": parsed["To"], "_body": body}
+               "snippet": body[:100], "_to": parsed["To"], "_body": body,
+               "_html": html.get_content() if html else None}
         return msg
 
-    def create_draft(self, to, subject, body, thread_id=None, in_reply_to=None):
+    def delete_draft(self, draft_id):
+        self.drafts.pop(draft_id, None)
+
+    def create_draft(self, to, subject, body, thread_id=None, in_reply_to=None, html=None):
         from outreach.integrations.gmail import build_raw
-        msg = self._msg(build_raw(self.me, "Pablo", to, subject, body, in_reply_to), thread_id, ["DRAFT"])
+        msg = self._msg(build_raw(self.me, "Pablo", to, subject, body, in_reply_to, html), thread_id, ["DRAFT"])
         did = f"d{next(_ids)}"
         self.drafts[did] = msg
         return {"draft_id": did, "message_id": msg["id"], "thread_id": msg["threadId"]}
@@ -98,7 +104,7 @@ class FakeGmail:
         self.messages[msg["id"]] = msg
         return msg
 
-    def send(self, to, subject, body, thread_id=None, in_reply_to=None):
+    def send(self, to, subject, body, thread_id=None, in_reply_to=None, html=None):
         self.sent_direct.append({"to": to, "subject": subject, "body": body})
         return {"message_id": f"m{next(_ids)}", "thread_id": thread_id or f"t{next(_ids)}"}
 

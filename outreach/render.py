@@ -1,6 +1,7 @@
 """Email templates: templates/<segment>/emailN.md with an optional 'subject:' first line."""
 from __future__ import annotations
 
+import html as _html
 import os
 import re
 from pathlib import Path
@@ -48,21 +49,59 @@ def values_for(lead: dict, cfg: dict) -> dict:
         "subject_line": lead.get("subject"),
         "sender_name": owner.get("name", "Pablo"),
         "booking_link": owner.get("booking_link", ""),
+        "funnel_url": owner.get("funnel_url", ""),
     }
 
 
-def footer(cfg: dict) -> str:
+def signature(cfg: dict) -> tuple[str, str]:
+    """(plain text, html) signature from templates/signature.txt and signature.html. Missing files fall back
+    to a two line text signature."""
+    txt, htm = TEMPLATES / "signature.txt", TEMPLATES / "signature.html"
+    name = (cfg.get("owner") or {}).get("name", "Pablo")
+    return (txt.read_text(encoding="utf-8").strip() if txt.exists() else f"{name}\nNexRevenue",
+            htm.read_text(encoding="utf-8").strip() if htm.exists() else "")
+
+
+ZIP_RE = re.compile(r"\b[A-Z]{2}\s+\d{5}\b")
+
+
+def footer(cfg: dict, signature_text: str = "") -> str:
+    """Opt-out line, plus the business address when the signature does not already carry one."""
     address = os.environ.get((cfg.get("owner") or {}).get("address_env", "BUSINESS_ADDRESS"), "").strip()
-    return f"Not relevant? Reply \"no\" and I won't follow up.\nNexRevenue, {address}" if address else ""
+    lines = ['Not relevant? Reply "no" and I won\'t follow up.']
+    if address and not ZIP_RE.search(signature_text):
+        lines.append(f"NexRevenue, {address}")
+    return "\n".join(lines)
 
 
-def render_step(lead: dict, cfg: dict, template: str) -> tuple[str | None, str]:
+def _parts(lead: dict, cfg: dict, template: str) -> tuple[str | None, str, str, str, str]:
     subject_tpl, body_tpl = load_template(template)
     values = values_for(lead, cfg)
     subject = fill(subject_tpl, values) if subject_tpl else None
     body = fill(body_tpl, values)
-    sign = f"{(cfg.get('owner') or {}).get('name', 'Pablo')}\nNexRevenue"
-    return subject, "\n\n".join(p for p in [body, sign, footer(cfg)] if p)
+    sig_text, sig_html = signature(cfg)
+    return subject, body, sig_text, sig_html, footer(cfg, sig_text)
+
+
+def render_step(lead: dict, cfg: dict, template: str) -> tuple[str | None, str]:
+    """Plain text email: body, signature, footer. This is what QA checks."""
+    subject, body, sig_text, _, foot = _parts(lead, cfg, template)
+    return subject, "\n\n".join(p for p in [body, sig_text, foot] if p)
+
+
+def render_email(lead: dict, cfg: dict, template: str) -> tuple[str | None, str, str | None]:
+    """(subject, plain text, html). The html version carries the designed signature. URLs stay plain text
+    (no <a> tags we add ourselves)."""
+    subject, body, sig_text, sig_html, foot = _parts(lead, cfg, template)
+    plain = "\n\n".join(p for p in [body, sig_text, foot] if p)
+    if not sig_html:
+        return subject, plain, None
+    esc = lambda t: _html.escape(t).replace("\n", "<br>")   # noqa: E731
+    paras = "".join(f"<div>{esc(p)}</div><br>" for p in body.split("\n\n"))
+    foot_html = f'<div style="font-size:12px;color:#666">{esc(foot)}</div>' if foot else ""
+    html = (f'<div style="font-family:Arial,sans-serif;font-size:14px;color:#222">{paras}{sig_html}<br>'
+            f"{foot_html}</div>")
+    return subject, plain, html
 
 
 def sequence(cfg: dict, segment: str) -> list[dict]:

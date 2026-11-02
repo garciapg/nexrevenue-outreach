@@ -33,6 +33,22 @@ def is_bounce(msg: dict) -> bool:
                 re.search(r"delivery status notification|undeliverable|returned mail", header(msg, "Subject"), re.I))
 
 
+ACTIVE = [S.ENRICHED, S.VERIFIED, S.PERSONALIZED, S.REVIEW, S.APPROVED, S.DRAFTED, S.SENT]
+
+
+def hold_colleagues(ctx, lead: dict, why: str) -> int:
+    """When one person at a company replies or opts out, nobody else there gets an automated email."""
+    if not lead.get("domain"):
+        return 0
+    n = 0
+    for other in ctx.repo.leads(ACTIVE, limit=50, where="domain = %s and id <> %s",
+                                params=(lead["domain"], lead["id"])):
+        ctx.move(other, "replies", "colleague_" + why, S.SUPPRESSED, changes={"next_action_at": None},
+                 detail={"because": lead.get("email")})
+        n += 1
+    return n
+
+
 def _match(ctx, msg: dict) -> dict | None:
     thread = msg.get("threadId")
     rows = ctx.repo.leads(WATCHED, limit=1, where="gmail_thread_id = %s", params=(thread,))
@@ -84,6 +100,7 @@ def run(ctx, cfg: dict) -> dict:
                 "next_action_at": None, "last_touch_at": now_utc()},
                 detail={"category": category, "summary": verdict.get("summary")})
             counts["replies"] += 1
+            counts["held"] = counts.get("held", 0) + hold_colleagues(ctx, lead, "replied")
             if category in STOP and not ctx.dry_run:
                 ctx.repo.suppress(lead["email"], "email", category)
             if category in WARM:

@@ -24,6 +24,7 @@ BLOCKS = {
     "replies": "outreach.blocks.replies",
     "crm": "outreach.blocks.crm",
     "report": "outreach.blocks.report",
+    "redraft": "outreach.blocks.redraft",
     "owner": "outreach.blocks.owner",
     "call_list": "outreach.blocks.call_list",
 }

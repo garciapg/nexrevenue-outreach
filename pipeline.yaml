@@ -7,6 +7,7 @@ owner:
   name: Pablo
   company: NexRevenue
   email: pablo@nexrevenue.com            # Gmail account that holds drafts and sends
+  funnel_url: seniorcoverageamerica.com      # plain text in emails (no hyperlink)
   booking_link: "https://link.blackumbrella.app/widget/bookings/fex-agent-roadmap-call"   # GHL calendar link, used in reply drafts
   address_env: BUSINESS_ADDRESS          # footer address comes from this env var / secret
 
@@ -53,6 +54,7 @@ blocks:
   enrich:
     provider: site_emails                # site_emails (free) | (phase 3: scout, apollo, prospeo)
     batch: 60
+    max_contacts: 3                      # emails per company (each gets its own email); 1 = one contact only
   verify:
     provider: mx_only                    # mx_only (free) | email_sleuth (needs port 25) | millionverifier
     batch: 60
@@ -70,6 +72,7 @@ blocks:
   send:
     provider: gmail_drafts               # gmail_drafts | gmail_auto | (phase 3: instantly)
     daily_cap: 20
+    contact_gap_days: 2                  # wait this long between emails to different people at one company
     business_hours: [9, 17]
   sent_detect:
     provider: gmail
@@ -106,6 +109,7 @@ jobs:                                    # what each scheduled run executes, in 
   draft:   [send]
   watch:   [sent_detect, replies, crm]
   report:  [crm, report]
+  redraft: [redraft, send]         # rebuild waiting step-1 drafts after a template change
   calls:   [source, research, owner, call_list]   # cold call list: python -m outreach run calls
 
 sheet:

@@ -19,7 +19,7 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.compose", "https://www.googleap
 
 
 def build_raw(from_email: str, from_name: str, to: str, subject: str, body: str,
-              in_reply_to: str | None = None) -> str:
+              in_reply_to: str | None = None, html: str | None = None) -> str:
     msg = EmailMessage()
     msg["From"] = formataddr((from_name, from_email))
     msg["To"] = to
@@ -28,6 +28,8 @@ def build_raw(from_email: str, from_name: str, to: str, subject: str, body: str,
         msg["In-Reply-To"] = in_reply_to
         msg["References"] = in_reply_to
     msg.set_content(body)
+    if html:
+        msg.add_alternative(html, subtype="html")
     return base64.urlsafe_b64encode(msg.as_bytes()).decode().rstrip("=")
 
 
@@ -90,14 +92,20 @@ class Gmail:
 
     # drafts -------------------------------------------------------------------
     def create_draft(self, to: str, subject: str, body: str, thread_id: str | None = None,
-                     in_reply_to: str | None = None) -> dict:
-        raw = build_raw(self.from_email, self.from_name, to, subject, body, in_reply_to)
+                     in_reply_to: str | None = None, html: str | None = None) -> dict:
+        raw = build_raw(self.from_email, self.from_name, to, subject, body, in_reply_to, html)
         message = {"raw": raw}
         if thread_id:
             message["threadId"] = thread_id
         out = self._call("POST", "drafts", json={"message": message})
         return {"draft_id": out["id"], "message_id": out["message"]["id"],
                 "thread_id": out["message"].get("threadId")}
+
+    def delete_draft(self, draft_id: str) -> None:
+        try:
+            self._call("DELETE", f"drafts/{draft_id}")
+        except LookupError:
+            pass
 
     def draft_exists(self, draft_id: str) -> bool:
         try:
@@ -107,8 +115,8 @@ class Gmail:
             return False
 
     def send(self, to: str, subject: str, body: str, thread_id: str | None = None,
-             in_reply_to: str | None = None) -> dict:
-        raw = build_raw(self.from_email, self.from_name, to, subject, body, in_reply_to)
+             in_reply_to: str | None = None, html: str | None = None) -> dict:
+        raw = build_raw(self.from_email, self.from_name, to, subject, body, in_reply_to, html)
         payload = {"raw": raw, **({"threadId": thread_id} if thread_id else {})}
         out = self._call("POST", "messages/send", json=payload)
         return {"message_id": out["id"], "thread_id": out.get("threadId")}
