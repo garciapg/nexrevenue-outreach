@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from .. import statuses as S
+from ..log import lead_line
 
 GENERIC = ("info", "contact", "admin", "office", "support", "sales", "hello", "help", "team", "service",
            "customerservice", "inquiries", "enquiries", "marketing", "noreply", "no-reply", "mail", "billing")
@@ -28,6 +29,8 @@ def candidates(lead: dict) -> list[tuple[str, str]]:
         seen.setdefault(e.lower(), "intake")
     for e in (lead.get("signals") or {}).get("site_emails", []):
         seen.setdefault(e.lower(), "website")
+    for e in (lead.get("data") or {}).get("bio_emails", []):
+        seen.setdefault(e.lower(), "social")
     domain = (lead.get("domain") or "").lower()
     first = (lead.get("contact_name") or "").split(" ")[0].lower()
 
@@ -74,7 +77,7 @@ def add_contacts(ctx, lead: dict, primary: str, max_contacts: int) -> int:
         if ctx.repo.is_suppressed(email=email) or ctx.repo.find_duplicate(None, email, None):
             continue
         if ctx.dry_run:
-            print(f"[dry-run] enrich: would add contact {email} for {lead.get('business_name')}")
+            lead_line("enrich", lead, "would add another contact")
             made += 1
             continue
         values = {k: lead.get(k) for k in COPY}
@@ -88,6 +91,28 @@ def add_contacts(ctx, lead: dict, primary: str, max_contacts: int) -> int:
     return made
 
 
+BIO_PROFILES = {"instagram": "https://www.instagram.com/{h}/", "tiktok": "https://www.tiktok.com/@{h}"}
+
+
+def bio_emails(web, socials: dict) -> list[str]:
+    """Emails in public Instagram / TikTok bios (no login, like kiryano/Scout). Public pages often hide the
+    bio from logged-out visitors, so this finds something only now and then; failures are ignored."""
+    from .research import extract_emails
+    found: list[str] = []
+    for platform, url in (socials or {}).items():
+        if platform not in BIO_PROFILES:
+            continue
+        handle = url.rstrip("/").split("/")[-1].lstrip("@")
+        if not handle:
+            continue
+        got = web.fetch(BIO_PROFILES[platform].format(h=handle))
+        if got:
+            for e in extract_emails(got[1]):
+                if e not in found and not e.endswith(("instagram.com", "tiktok.com", "facebook.com")):
+                    found.append(e)
+    return found
+
+
 PROVIDERS = {"site_emails": best_email}   # add scout / apollo / prospeo here (each returns (email, source))
 
 
@@ -95,6 +120,14 @@ def run(ctx, cfg: dict) -> dict:
     counts = {"enriched": 0, "no_contact": 0}
     chain = [cfg.get("provider", "site_emails")] + list(cfg.get("fallback", []) or [])
     for lead in ctx.repo.leads([S.QUALIFIED], limit=int(cfg.get("batch", 60))):
+        socials = (lead.get("data") or {}).get("socials") or {}
+        if cfg.get("social_bio", True) and socials and not candidates(lead):
+            try:
+                found = bio_emails(ctx.client("web"), socials)
+            except Exception:
+                found = []
+            if found:
+                lead["data"] = {**(lead.get("data") or {}), "bio_emails": found}
         email, src = None, None
         for name in chain:
             if name in PROVIDERS:

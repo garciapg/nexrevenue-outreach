@@ -39,8 +39,9 @@ def cmd_run(args: list[str]) -> None:
         if unknown:
             sys.exit(f"Unknown block(s): {unknown}. Blocks: {', '.join(BLOCKS)}")
         result = run_job("+".join(args), cfg, only=args)
+    from .log import say
     for err in result["errors"][:20]:
-        print("ERROR", err.get("block"), err.get("lead", ""), err.get("error"))
+        say(f"ERROR {err.get('block')} {err.get('lead', '')} {err.get('error')}")
     if result["errors"]:
         sys.exit(1 if all("failed" in v for v in result["counts"].values() if isinstance(v, dict)) else 0)
 

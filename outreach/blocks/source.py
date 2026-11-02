@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 from .. import statuses as S
+from ..log import lead_line
 from ..integrations.web import domain_of, normalize_url
 
 ALIASES = {
@@ -83,9 +84,11 @@ def normalize_row(row: dict) -> dict:
     return {k: (v or None) for k, v in lead.items()}
 
 
-def _ingest(ctx, raw: dict, source: str, ref: str) -> tuple[str, str | None]:
+def _ingest(ctx, raw: dict, source: str, ref: str, data: dict | None = None) -> tuple[str, str | None]:
     """Returns (result, lead_id). result: imported | duplicate | suppressed | skipped."""
     lead = normalize_row(raw)
+    if data:
+        lead["data"] = {**(lead.get("data") or {}), **data}
     if (lead.pop("sponsored", None) or "").lower() in ("true", "yes", "1", "sponsored"):
         return "skipped: sponsored result (call tracking phone)", None
     if not lead.get("business_name"):
@@ -100,7 +103,7 @@ def _ingest(ctx, raw: dict, source: str, ref: str) -> tuple[str, str | None]:
         return f"duplicate of {dup['id']}", str(dup["id"])
     lead.update(status=S.NEW, source=source, source_ref=ref)
     if ctx.dry_run:
-        print(f"[dry-run] source: would import {lead['business_name']}")
+        lead_line("source", lead, "would import")
         return "imported (dry run)", None
     lead_id = ctx.repo.insert_lead(lead)
     ctx.repo.event(lead_id, ctx.run_id, "source", "sourced", provider=source, to_status=S.NEW,

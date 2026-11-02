@@ -23,6 +23,7 @@ CUSTOM_FIELDS = {
     "nr_first_line": "NR First Line",
     "nr_call_brief": "NR Call Brief",
     "nr_lead_id": "NR Lead ID",
+    "nr_socials": "NR Socials",
 }
 
 

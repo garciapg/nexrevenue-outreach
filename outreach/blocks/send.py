@@ -7,6 +7,7 @@ Input: approved (step 1), sent with a due next step  Output: drafted (or sent), 
 from __future__ import annotations
 
 from .. import statuses as S
+from ..log import lead_line
 from ..render import render_email, sequence
 from ..timeutil import add_business_days, in_business_hours, local_midnight_utc, now_utc
 
@@ -26,7 +27,7 @@ def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
     thread = lead.get("gmail_thread_id") if follow_up else None
     reply_to = lead.get("last_rfc_id") if follow_up else None
     if ctx.dry_run:
-        print(f"[dry-run] send: {provider} step {step['step']} to {lead['email']}: {subject}")
+        lead_line("send", lead, f"{provider} step {step['step']}")
         return
     if provider == "gmail_auto":
         out = gmail.send(lead["email"], subject, body, thread, reply_to, html)

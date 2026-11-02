@@ -9,6 +9,7 @@ from typing import Any, Callable
 from . import statuses as S
 from .config import env, load_config
 from .db import Repo
+from .log import lead_line, say
 
 BLOCKS = {
     "source": "outreach.blocks.source",
@@ -25,6 +26,7 @@ BLOCKS = {
     "crm": "outreach.blocks.crm",
     "report": "outreach.blocks.report",
     "redraft": "outreach.blocks.redraft",
+    "maps": "outreach.blocks.maps",
     "owner": "outreach.blocks.owner",
     "call_list": "outreach.blocks.call_list",
 }
@@ -64,7 +66,7 @@ class Context:
         if to_status:
             changes["status"] = to_status
         if self.dry_run:
-            print(f"[dry-run] {block}: {lead.get('business_name')} {type_} -> {to_status or '-'} {list(changes)}")
+            lead_line(block, lead, f"{type_} -> {to_status or '-'} {list(changes)}")
             lead.update(changes)
             return
         if changes:
@@ -76,7 +78,7 @@ class Context:
     def note(self, block: str, type_: str, lead: dict | None = None, **event_kw: Any) -> None:
         """Log an event without changing the lead."""
         if self.dry_run:
-            print(f"[dry-run] {block}: {type_} {event_kw.get('detail', '')}")
+            say(f"[dry-run] {block}: {type_} {event_kw.get('detail', '')}")
             return
         self.repo.event(lead["id"] if lead else None, self.run_id, block, type_, **event_kw)
 
@@ -113,11 +115,15 @@ def default_factories() -> dict[str, Callable]:
         from .integrations.web import Web
         return Web()
 
+    def maps(ctx: Context):
+        from .integrations.maps_kit import MapsKit
+        return MapsKit.from_cfg(ctx.block_cfg("maps"))
+
     def dns(ctx: Context):
         from .integrations.web import DNS
         return DNS()
 
-    return {"sheets": sheets, "gmail": gmail, "ghl": ghl, "llm": llm, "web": web, "dns": dns}
+    return {"sheets": sheets, "gmail": gmail, "ghl": ghl, "llm": llm, "web": web, "dns": dns, "maps": maps}
 
 
 def run_block(ctx: Context, name: str) -> dict:
@@ -143,7 +149,7 @@ def run_job(job: str, cfg: dict | None = None, repo: Repo | None = None,
             ctx.errors.append({"block": name, "error": str(e)[:500], "trace": traceback.format_exc()[-1500:]})
             counts[name] = {"failed": str(e)[:200]}
         counts[name]["seconds"] = round((datetime.now(timezone.utc) - started).total_seconds(), 1)
-        print(f"{name}: {counts[name]}")
+        say(f"{name}: {counts[name]}")
     if run_id:
         repo.finish_run(run_id, ok=not ctx.errors, counts=counts, errors=ctx.errors)
     return {"run_id": run_id, "counts": counts, "errors": ctx.errors}

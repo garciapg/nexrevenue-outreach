@@ -6,7 +6,8 @@ from ..timeutil import local_now
 
 LEADS_HEADER = ["Lead ID", "Segment", "Status", "Business", "Contact", "Email", "Phone", "City", "State", "Fit",
                 "Fit Reason", "Emails Sent", "Calls", "Last Touch", "Next Action", "Reply", "First Line",
-                "Website", "GHL Contact", "Updated"]
+                "Website", "GHL Contact", "Updated", "Instagram", "Facebook", "LinkedIn",
+                "Owner Source", "Source"]
 
 
 def _fmt(v) -> str:
@@ -43,7 +44,9 @@ def run(ctx, cfg: dict) -> dict:
         str(l["id"]), l.get("segment"), l.get("status"), l.get("business_name"), l.get("contact_name"), l.get("email"),
         l.get("phone"), l.get("city"), l.get("state"), l.get("fit_score"), l.get("fit_reason"), l.get("emails_sent"),
         l.get("calls_made"), _fmt(l.get("last_touch_at")), _fmt(l.get("next_action_at")), l.get("reply_category"),
-        l.get("first_line"), l.get("website"), l.get("ghl_contact_id"), _fmt(l.get("updated_at"))] for l in leads])
+        l.get("first_line"), l.get("website"), l.get("ghl_contact_id"), _fmt(l.get("updated_at")),
+        *[((l.get("data") or {}).get("socials") or {}).get(k, "") for k in ("instagram", "facebook", "linkedin")],
+        ((l.get("data") or {}).get("owner") or {}).get("source", ""), l.get("source")] for l in leads])
     rows = metrics(ctx.repo)
     rows[0][1] = local_now(ctx.cfg.get("timezone", "America/New_York")).strftime("%Y-%m-%d %H:%M ET")
     sheets.write_table("dashboard", ["Metric", "Value"], rows)

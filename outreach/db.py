@@ -166,6 +166,14 @@ class Repo:
             "select 1 from outreach.coverage where provider=%s and query=%s and coalesce(region,'')=coalesce(%s,'')",
             (provider, query, region)).fetchone() is not None
 
+    def coverage_due(self, provider: str, query: str, region: str | None, days: int) -> bool:
+        """True when this search was never run, or last ran more than `days` ago."""
+        row = self.conn.execute(
+            "select at from outreach.coverage where provider=%s and query=%s and coalesce(region,'')=coalesce(%s,'')",
+            (provider, query, region)).fetchone()
+        return row is None or bool(self.conn.execute(
+            "select %s < now() - make_interval(days => %s) as due", (row["at"], days)).fetchone()["due"])
+
     def add_coverage(self, provider: str, query: str, region: str | None, found: int, new: int) -> None:
         self.conn.execute(
             "insert into outreach.coverage (provider, query, region, found, new_leads) values (%s,%s,%s,%s,%s)"

@@ -7,6 +7,7 @@ Run it as the job `redraft` (it runs `send` right after to create the new drafts
 from __future__ import annotations
 
 from .. import statuses as S
+from ..log import lead_line
 
 
 def run(ctx, cfg: dict) -> dict:
@@ -18,7 +19,7 @@ def run(ctx, cfg: dict) -> dict:
             counts["already_gone"] += 1          # sent or deleted by you: sent detection decides
             continue
         if ctx.dry_run:
-            print(f"[dry-run] redraft: would delete and rebuild the draft for {lead.get('email')}")
+            lead_line("redraft", lead, "would delete and rebuild the draft")
         else:
             gmail.delete_draft(draft_id)
         ctx.move(lead, "redraft", "draft_reset", S.APPROVED,
