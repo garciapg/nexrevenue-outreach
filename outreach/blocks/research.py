@@ -25,6 +25,23 @@ def extract_emails(html: str) -> list[str]:
     return found
 
 
+PHONE_RE = re.compile(r"(?:tel:\+?1?|\b)\(?([2-9]\d{2})\)?[\s.\-]?([2-9]\d{2})[\s.\-]?(\d{4})\b")
+
+
+def extract_phones(htmls: list[str]) -> list[str]:
+    """US phone numbers published on the site (tel: links first), as +1XXXXXXXXXX, most frequent first."""
+    seen: dict[str, int] = {}
+    for html in htmls:
+        for m in re.finditer(r"tel:([^\"'>]+)", html):
+            d = re.sub(r"\D", "", m.group(1))[-10:]
+            if len(d) == 10:
+                seen[d] = seen.get(d, 0) + 3
+        for a, b, c in PHONE_RE.findall(html_to_text(html)):
+            d = a + b + c
+            seen[d] = seen.get(d, 0) + 1
+    return ["+1" + d for d, _ in sorted(seen.items(), key=lambda kv: -kv[1])][:5]
+
+
 def crawl(web, website: str, max_pages: int) -> dict:
     pages, texts, emails = [], [], []
     first = web.fetch(website)
@@ -42,8 +59,8 @@ def crawl(web, website: str, max_pages: int) -> dict:
         for e in extract_emails(page_html):
             if e not in emails:
                 emails.append(e)
-    tel = sorted(set(re.findall(r"tel:\+?([\d\-\s().]{10,})", html)))
-    return {"pages": pages, "text": "\n\n".join(texts)[:15000], "emails": emails, "reachable": True, "tel": tel[:3]}
+    return {"pages": pages, "text": "\n\n".join(texts)[:15000], "emails": emails, "reachable": True,
+            "phones": extract_phones([h for _, h in queue])}
 
 
 def run(ctx, cfg: dict) -> dict:
@@ -59,7 +76,8 @@ def run(ctx, cfg: dict) -> dict:
                 continue
             result = crawl(web, site, int(cfg.get("max_pages", 4)))
             signals = dict(lead.get("signals") or {})
-            signals.update({"site_emails": result["emails"], "site_reachable": result["reachable"]})
+            signals.update({"site_emails": result["emails"], "site_reachable": result["reachable"],
+                            "site_phones": result.get("phones", [])})
             ctx.move(lead, "research", "researched", S.RESEARCHED, provider="site_crawl",
                      changes={"research_text": result["text"], "research_pages": result["pages"],
                               "signals": signals, **ctx.ok(lead)},
