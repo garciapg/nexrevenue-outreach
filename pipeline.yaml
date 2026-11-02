@@ -7,7 +7,7 @@ owner:
   name: Pablo
   company: NexRevenue
   email: pablo@nexrevenue.com            # Gmail account that holds drafts and sends
-  booking_link: ""                       # GHL calendar link, used in reply drafts
+  booking_link: "https://link.blackumbrella.app/widget/bookings/fex-agent-roadmap-call"   # GHL calendar link, used in reply drafts
   address_env: BUSINESS_ADDRESS          # footer address comes from this env var / secret
 
 dry_run: false                           # true = run everything, write nothing, email nothing
@@ -120,6 +120,27 @@ sheet:
 
 ghl:
   location_id: yRvntfmrpk3WWntrxprP
-  pipeline_id: ""                        # fill with: python -m outreach ghl-setup
-  stages: {}                             # status -> stage id, filled by ghl-setup
+  pipeline_id: 45wfYEfbs5gebRlpPjZx      # "Outreach" pipeline
+  stages:                                # status -> stage id in the Outreach pipeline
+    qualified: ba8ece7e-266a-4fad-8310-4b440745aab0
+    contacted: 17918549-d930-45af-ad13-7e665e9c4155
+    engaged: 5c0b3c37-2fcf-44b7-af27-50e99d5b420d
+    call_booked: add44003-13c4-4ab8-9bef-bb15ab8e649f
+    proposal: a19bb584-d7f9-49ad-9c16-77a0cd964613
+    won: 4c339e9c-f7bb-4c94-96e3-a061bffb9443
+    lost: ee8248f6-87a6-41c9-9f7a-7957861b5c8c
+  field_ids:                             # custom field ids created by ghl-setup (not secrets)
+    nr_segment: 1rPjrDQ8OGxgHHFIl95s
+    nr_status: 7zfxpLQlgZ8m83IWWkC0
+    nr_fit_score: 73awV8VDufIWmvY25GO2
+    nr_fit_reason: 70J7rju1SARn6NoVLPY2
+    nr_emails_sent: aVWYaIdDEhXHR8rhU2pB
+    nr_calls_made: 6ZJ4j4wNvRYV7U8H3ncp
+    nr_last_touch: HO4JBwjQGwWJ7fNocZeu
+    nr_next_action: sgomJDqsMn5OyAMbTv05
+    nr_reply_category: 190AUUcfeFXt50Oqn4lG
+    nr_buys_via: S7sE5wcvyTVPxq5ymsM2
+    nr_first_line: poz20gdG9BcuOIhoDg3g
+    nr_call_brief: sa7vafVPiJLHBlik67Ez
+    nr_lead_id: BMbHUzDO5JuGtN7aUGr3
   tag_prefix: "nr-"
