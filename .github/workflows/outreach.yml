@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job or block(s): intake, write, draft, watch, report, or e.g. 'qualify personalize'"
+        description: "Job or block(s): intake, write, draft, watch, report, calls, or e.g. 'qualify personalize'"
         required: true
         default: watch
       dry_run:

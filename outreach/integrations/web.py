@@ -34,6 +34,20 @@ def domain_of(url: str | None) -> str | None:
     return host[4:] if host.startswith("www.") else host
 
 
+def maps_search_url(query: str) -> str:
+    """Google Maps search URL. hl=en&gl=us is required: without gl=us Maps strips review counts and
+    caps results at 10, which looks like the data is missing."""
+    from urllib.parse import quote_plus
+    return f"https://www.google.com/maps/search/{quote_plus(query)}?hl=en&gl=us"
+
+
+def maps_url(url: str) -> str:
+    """Adds hl=en&gl=us to any Maps URL that lacks it."""
+    if "gl=us" in url:
+        return url
+    return url + ("&" if "?" in url else "?") + "hl=en&gl=us"
+
+
 class Web:
     def __init__(self, delay: float = 1.0, timeout: int = 12):
         self.delay = delay

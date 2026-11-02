@@ -27,6 +27,7 @@ ALIASES = {
     "reviews": ["# reviews", "reviews", "review_count"],
     "segment": ["segment"],
     "notes": ["notes", "note"],
+    "sponsored": ["sponsored", "is_sponsored", "ad"],
 }
 STATE_RE = re.compile(r",\s*([A-Z]{2})\s*\d{5}")
 
@@ -80,6 +81,8 @@ def normalize_row(row: dict) -> dict:
 def _ingest(ctx, raw: dict, source: str, ref: str) -> tuple[str, str | None]:
     """Returns (result, lead_id). result: imported | duplicate | suppressed | skipped."""
     lead = normalize_row(raw)
+    if (lead.pop("sponsored", None) or "").lower() in ("true", "yes", "1", "sponsored"):
+        return "skipped: sponsored result (call tracking phone)", None
     if not lead.get("business_name"):
         return "skipped: no name", None
     if not (lead.get("website") or lead.get("phone") or lead.get("email")):

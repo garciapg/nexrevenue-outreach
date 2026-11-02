@@ -81,6 +81,24 @@ blocks:
   report:
     provider: sheet_dashboard
     summary_email: true
+  owner:                                 # finds a verified owner name; never invents or guesses one
+    ladder: [licence, bbb, website, reviews]   # first rung that yields an owner wins
+    licence_folder: data/licences        # state licence CSV exports (see docs/CALL_LIST.md)
+    trade_words: [insurance, life, final expense, burial]   # licence trade must contain one of these
+    conflict_words: [plumbing, concrete, drywall, painting, solar, electric, roofing, auto, title, health]
+    review_mentions: 3                   # same full name in 3+ reviews
+    batch: 100
+  call_list:                             # the cold call sheet (tab "Call List")
+    tab: call_list
+    must_sell: [final expense, burial insurance, funeral insurance, senior life]   # must appear on their own pages
+    skip_words: [solar, globe life, american income, liberty national, new york life, state farm,
+                 farm bureau, primerica, mutual of omaha, aflac, allstate, farmers, nationwide]
+    trade_words: [insurance, final, expense, burial, life]
+    min_reviews: 10
+    max_reviews: 150                     # qualifies with or without an owner
+    owner_only_max: 300                  # 150-300 only with a verified owner name; over this, skip
+    require_owner: true                  # true = never list a row without a verified owner
+    max_rows: 1000
 
 jobs:                                    # what each scheduled run executes, in order
   intake:  [source, research, qualify, enrich, verify]
@@ -88,6 +106,7 @@ jobs:                                    # what each scheduled run executes, in 
   draft:   [send]
   watch:   [sent_detect, replies, crm]
   report:  [crm, report]
+  calls:   [source, research, owner, call_list]   # cold call list: python -m outreach run calls
 
 sheet:
   id_env: SHEET_ID
@@ -97,6 +116,7 @@ sheet:
     review: Review
     dashboard: Dashboard
     dnc: Do Not Contact
+    call_list: Call List
 
 ghl:
   location_id: yRvntfmrpk3WWntrxprP

@@ -198,3 +198,36 @@ def test_unsubscribe_and_bounce_suppress(env):
     assert repo.get_lead(a)["status"] == S.UNSUBSCRIBED
     assert repo.get_lead(b)["status"] == S.BOUNCED
     assert repo.is_suppressed(email="a@a.com") and repo.is_suppressed(email="b@b.com")
+
+
+def test_calls_job_builds_owner_verified_call_list(env, tmp_path, monkeypatch):
+    """Inbox -> research -> owner ladder -> Call List tab, with a licence CSV and a website ownership statement."""
+    repo, cfg, c = env
+    sheets = c["sheets"]
+    lic = tmp_path / "licences"
+    lic.mkdir()
+    (lic / "fl.csv").write_text("Licensee Name,Title,Business Name,City,State,Phone,License Type,Status\n"
+                                "Maria Lopez,Owner,Insure Final Expense,Tampa,FL,7869642421,Life Agency,Active\n")
+    cfg["blocks"]["owner"]["licence_folder"] = str(lic)
+    c["web"].sites["https://sunrisefe.com/"] = ("<html><body>Sunrise Burial Agency sells final expense. "
+                                                "Dan Reyes, Owner. Call <a href='tel:8135550111'>us</a></body></html>")
+    c["web"].sites["https://farmerjoe.com/"] = "<html><body>We sell final expense. Call (813) 555-0122</body></html>"
+    sheets.add_rows("inbox", ["Business Name", "Address", "City", "State", "# Reviews", "Phone", "Website", "Status"], [
+        {"Business Name": "Insure Final Expense", "Address": "18417 US Hwy 19 N", "City": "Tampa", "State": "FL",
+         "# Reviews": "40", "Phone": "+1 786-964-2421", "Website": "https://insurefinalexpense.com/"},
+        {"Business Name": "Sunrise Burial Agency", "Address": "9 Oak St", "City": "Tampa", "State": "FL",
+         "# Reviews": "220", "Phone": "813-555-0999", "Website": "https://sunrisefe.com/"},
+        {"Business Name": "Joe Agency", "Address": "1 Elm St", "City": "Tampa", "State": "FL",
+         "# Reviews": "30", "Phone": "813-555-0122", "Website": "https://farmerjoe.com/"},
+    ])
+    out = run_job("calls", cfg, repo, clients=c)
+    assert not out["errors"], out["errors"]
+    tab = sheets.tabs["call_list"]
+    assert tab[0] == ["Company Name", "City", "Owner Name", "Phone", "Reviews", "Notes", "Website"]
+    assert [r[0] for r in tab[1:]] == ["Insure Final Expense", "Sunrise Burial Agency"]   # licence owner first
+    assert tab[1][2] == "Maria Lopez"
+    assert tab[2][2] == "Dan Reyes" and tab[2][3] == "+18135550111 / +18135550999"         # site number first, both kept
+    summary = out["counts"]["call_list"]
+    assert summary["dropped: owner not verified"] == 1 and summary["owner_pct"] == 100.0
+    lead = leads_by_name(repo)["Sunrise Burial Agency"]
+    assert lead["contact_name"] == "Dan Reyes" and lead["data"]["owner"]["source"] == "website"

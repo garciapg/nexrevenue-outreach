@@ -31,6 +31,8 @@ that buy FE calls, leads or live transfers, RTB first).
 - Send: open Gmail drafts each morning and press Send. The system notices and schedules follow-ups.
 - Watch: replies are sorted, follow-ups stop, warm replies get a drafted answer and an alert email.
   Everything shows in GHL and the **Dashboard** tab.
+- Call: `python -m outreach run calls` (or `/call-list`) builds the **Call List** tab: owner verified,
+  phone confirmed, strongest first. Rules and the owner name ladder: docs/CALL_LIST.md.
 
 ## Change it
 
@@ -41,7 +43,7 @@ on a branch with tests and a CHANGELOG line. See CLAUDE.md for the rules.
 ## Commands
 
 ```
-python -m outreach run intake            # or write, draft, watch, report, or single blocks
+python -m outreach run intake            # or write, draft, watch, report, calls, or single blocks
 python -m outreach run draft --dry-run   # preview without writing anything
 python -m outreach status
 python -m outreach lead someone@agency.com

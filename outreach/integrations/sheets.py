@@ -15,6 +15,7 @@ HEADERS = {
                "First Line", "QA", "Website"],
     "dashboard": ["Metric", "Value"],
     "dnc": ["Value", "Reason", "Added"],
+    "call_list": ["Company Name", "City", "Owner Name", "Phone", "Reviews", "Notes", "Website"],
 }
 
 
