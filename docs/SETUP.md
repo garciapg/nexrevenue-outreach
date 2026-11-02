@@ -5,9 +5,9 @@ New repository secret**. Never paste them in chats or commit them.
 
 ## 1. Database (Supabase, free)
 
-The schema `outreach` lives inside the existing B2B contractor project, separate from its other tables.
+The schema `outreach` lives inside the existing "Lead distribution" Supabase project (ref hllisfcldjnbjmidpfdf), separate from its other tables. Migration 001 is already applied there.
 
-1. Supabase dashboard > the contractor project > **Connect** > **Session pooler** connection string
+1. Supabase dashboard > the "Lead distribution" project > **Connect** > **Session pooler** connection string
    (use the pooler: GitHub Actions can't reach the direct IPv6 address).
 2. Put your database password in it. Save as secret **DATABASE_URL**.
 3. The schema itself is already applied (Claude did it). To re-apply later: `py -m outreach migrate`.
