@@ -149,11 +149,17 @@ def test_full_cycle(env):
     assert repo.query("select count(*) n from outreach.messages where kind = 'reply'")[0]["n"] == 1
 
     # ---- report ------------------------------------------------------------------
+    cfg["blocks"]["report"]["summary_hour"] = 0
     out = run_job("report", cfg, repo, clients=c)
     assert not out["errors"], out["errors"]
     assert sheets.tabs["leads"][0][0] == "Lead ID" and len(sheets.tabs["leads"]) == 4
-    assert any(row[0] == "Reply rate %" for row in sheets.tabs["dashboard"])
-    assert any("Daily summary" in m["subject"] for m in gmail.sent_direct)
+    dash = {row[0].strip(): row[1] for row in sheets.tabs["dashboard"]}
+    assert "Reply rate %" in dash and dash["HEALTH"] in ("OK",) or dash["HEALTH"].endswith("issue(s)")
+    assert "Gmail drafts to send" in dash and "Maps searches done / planned" in dash
+    assert sheets.tabs["runs"][0][:2] == ["Started (local)", "Job"] and len(sheets.tabs["runs"]) > 3
+    assert sum("Daily summary" in m["subject"] for m in gmail.sent_direct) == 1
+    run_job("report", cfg, repo, clients=c)                       # the summary goes out once a day only
+    assert sum("Daily summary" in m["subject"] for m in gmail.sent_direct) == 1
 
     # Every lead has a complete event history.
     types = [r["type"] for r in repo.query("select type from outreach.events where lead_id = %s order by id", (agency["id"],))]
@@ -244,3 +250,21 @@ def test_watch_job_also_does_the_morning_work():
     for block in ("sent_detect", "replies", "source", "research", "qualify", "personalize", "qa", "approve", "send"):
         assert block in watch
     assert watch.index("sent_detect") < watch.index("send") and watch.index("replies") < watch.index("send")
+
+
+def test_health_flags_gmail_login_and_alerts_once_a_day(env):
+    from outreach.blocks.report import health
+    repo, cfg, c = env
+    rid = repo.start_run("watch", False)
+    repo.finish_run(rid, False, {}, [{"block": "replies", "error": "400 Client Error: Bad Request for url: "
+                                      "https://oauth2.googleapis.com/token"}])
+    rid = repo.start_run("watch", False)
+    repo.finish_run(rid, False, {}, [{"block": "send", "error": "boom"}])
+    keys = [k for k, _ in health(repo, cfg)]
+    assert "gmail_auth" in keys and "failing_runs" in keys
+    run_job("report", cfg, repo, clients=c)
+    run_job("report", cfg, repo, clients=c)
+    alerts = [m for m in c["gmail"].sent_direct if "Needs attention" in m["subject"]]
+    assert len(alerts) == 1 and "runs had errors" in alerts[0]["body"]   # gmail_auth is never emailed
+    dash = {row[0].strip(): row[1] for row in c["sheets"].tabs["dashboard"]}
+    assert dash["HEALTH"] != "OK" and any(k.startswith("! Gmail login is failing") for k in dash)

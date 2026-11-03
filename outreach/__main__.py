@@ -77,10 +77,27 @@ def cmd_lead(key: str) -> None:
 
 
 def cmd_migrate() -> None:
+    """Applies each supabase/migrations/*.sql file once, in order, and records it in outreach.schema_migrations.
+    A database set up before this table existed is recognised and its migrations are marked as applied."""
     repo = _repo()
+    repo.conn.execute("create schema if not exists outreach")
+    repo.conn.execute("create table if not exists outreach.schema_migrations "
+                      "(name text primary key, applied_at timestamptz not null default now())")
+    applied = {r["name"] for r in repo.query("select name from outreach.schema_migrations")}
+    if not applied and repo.query("select 1 from information_schema.tables where table_schema = 'outreach' "
+                                  "and table_name = 'leads'"):
+        applied.add("001_outreach.sql")
+        if repo.query("select 1 from pg_indexes where schemaname = 'outreach' and indexname = 'leads_domain_idx'"):
+            applied.add("002_multi_contact.sql")
+        for name in applied:
+            repo.conn.execute("insert into outreach.schema_migrations (name) values (%s) on conflict do nothing", (name,))
     for path in sorted((ROOT / "supabase" / "migrations").glob("*.sql")):
+        if path.name in applied:
+            continue
         repo.conn.execute(path.read_text(encoding="utf-8"))
+        repo.conn.execute("insert into outreach.schema_migrations (name) values (%s)", (path.name,))
         print("applied", path.name)
+    print("migrations up to date")
 
 
 def cmd_init_sheet() -> None:

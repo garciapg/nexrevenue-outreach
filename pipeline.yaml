@@ -156,6 +156,7 @@ blocks:
   report:
     provider: sheet_dashboard
     summary_email: true
+    summary_hour: 18                     # daily summary email once a day after this hour (local time)
   owner:                                 # finds a verified owner name; never invents or guesses one
     ladder: [licence, bbb, website, reviews]   # first rung that yields an owner wins
     licence_folder: data/licences        # state licence CSV exports (see docs/CALL_LIST.md)
@@ -182,7 +183,7 @@ jobs:                                    # what each scheduled run executes, in 
   draft:   [send]
   # GitHub runs scheduled jobs late or skips them on busy days. So every inbox check also moves leads
   # forward and makes drafts: whichever run fires first does the morning work (cap and approvals still apply).
-  watch:   [sent_detect, replies, source, research, owner, qualify, enrich, verify, personalize, qa, approve, send, crm]
+  watch:   [sent_detect, replies, source, research, owner, qualify, enrich, verify, personalize, qa, approve, send, crm, report]
   report:  [crm, report]
   redraft: [redraft, send]         # rebuild waiting step-1 drafts after a template change
   calls:   [source, research, owner, call_list]   # cold call list: python -m outreach run calls
@@ -196,6 +197,7 @@ sheet:
     dashboard: Dashboard
     dnc: Do Not Contact
     call_list: Call List
+    runs: Runs
 
 ghl:
   location_id: yRvntfmrpk3WWntrxprP
