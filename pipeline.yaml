@@ -44,7 +44,7 @@ blocks:
   maps:                                  # nightly Google Maps search (job: leadgen)
     provider: maps_kit                   # Google Maps Scraper Kit, cloned by the workflow
     kit_dir: ../google-maps-scraper-kit
-    per_run: 4                           # keyword x city searches per night
+    per_run: 2                           # keyword x city searches per night (4 searches = ~630 found, ~400 pass filters)
     grid: 2                              # 2 x 2 map tiles per search (past Google's ~120 cap)
     reviews: 3                           # review texts per place (the owner block looks for names in them)
     min_reviews: 10
@@ -115,21 +115,21 @@ blocks:
   research:
     provider: site_crawl
     max_pages: 4                         # home + contact + about + careers
-    batch: 40
+    batch: 100
   qualify:
     provider: claude                     # claude | rules
     model: cheap
-    batch: 40
+    batch: 100
     per_call: 8                          # leads per model call (saves your Pro limits)
     keep_score: 60
   enrich:
     provider: site_emails                # site_emails (free) | (phase 3: scout, apollo, prospeo)
-    batch: 60
+    batch: 100
     max_contacts: 3                      # emails per company (each gets its own email); 1 = one contact only
     social_bio: true                     # no email on the site? look at public Instagram / TikTok bios
   verify:
     provider: mx_only                    # mx_only (free) | email_sleuth (needs port 25) | millionverifier
-    batch: 60
+    batch: 100
   personalize:
     provider: claude
     model: writer
@@ -180,7 +180,9 @@ jobs:                                    # what each scheduled run executes, in 
   intake:  [source, research, owner, qualify, enrich, verify]
   write:   [personalize, qa, approve]
   draft:   [send]
-  watch:   [sent_detect, replies, crm]
+  # GitHub runs scheduled jobs late or skips them on busy days. So every inbox check also moves leads
+  # forward and makes drafts: whichever run fires first does the morning work (cap and approvals still apply).
+  watch:   [sent_detect, replies, source, research, owner, qualify, enrich, verify, personalize, qa, approve, send, crm]
   report:  [crm, report]
   redraft: [redraft, send]         # rebuild waiting step-1 drafts after a template change
   calls:   [source, research, owner, call_list]   # cold call list: python -m outreach run calls
