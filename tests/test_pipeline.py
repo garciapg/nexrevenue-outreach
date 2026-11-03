@@ -111,7 +111,7 @@ def test_full_cycle(env):
 
     # Pablo sends the agency draft; the buyer draft stays a draft.
     gmail.user_sends_draft(agency["draft_id"])
-    out = run_job("watch", cfg, repo, clients=c)
+    out = run_job("watch", cfg, repo, clients=c, only=["sent_detect", "replies", "crm"])
     assert not out["errors"], out["errors"]
     by = leads_by_name(repo)
     agency = by["Insure Final Expense"]
@@ -134,7 +134,7 @@ def test_full_cycle(env):
     # ---- reply arrives ---------------------------------------------------------------
     gmail.inbound("maria@insurefinalexpense.com", "Re: Insure Final Expense new agents",
                   "Yes send me the funnel\n\nOn Mon, Pablo wrote:\n> hi", agency["gmail_thread_id"])
-    out = run_job("watch", cfg, repo, clients=c)
+    out = run_job("watch", cfg, repo, clients=c, only=["sent_detect", "replies", "crm"])
     assert not out["errors"], out["errors"]
     agency = leads_by_name(repo)["Insure Final Expense"]
     assert agency["status"] == S.REPLIED and agency["reply_category"] == "interested"
@@ -145,7 +145,7 @@ def test_full_cycle(env):
     assert ghl.notes and "Yes send me the funnel" in ghl.notes[-1][1]
 
     # Re-running watch does not double count anything.
-    run_job("watch", cfg, repo, clients=c)
+    run_job("watch", cfg, repo, clients=c, only=["sent_detect", "replies", "crm"])
     assert repo.query("select count(*) n from outreach.messages where kind = 'reply'")[0]["n"] == 1
 
     # ---- report ------------------------------------------------------------------
@@ -235,3 +235,12 @@ def test_calls_job_builds_owner_verified_call_list(env, tmp_path, monkeypatch):
     assert summary["dropped: owner not verified"] == 1 and summary["owner_pct"] == 100.0
     lead = leads_by_name(repo)["Sunrise Burial Agency"]
     assert lead["contact_name"] == "Dan Reyes" and lead["data"]["owner"]["source"] == "website"
+
+
+def test_watch_job_also_does_the_morning_work():
+    """GitHub skips scheduled runs on busy days, so any watch run must move leads forward and draft."""
+    from outreach.config import load_config
+    watch = load_config()["jobs"]["watch"]
+    for block in ("sent_detect", "replies", "source", "research", "qualify", "personalize", "qa", "approve", "send"):
+        assert block in watch
+    assert watch.index("sent_detect") < watch.index("send") and watch.index("replies") < watch.index("send")
