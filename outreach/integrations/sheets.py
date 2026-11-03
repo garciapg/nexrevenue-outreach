@@ -14,6 +14,7 @@ HEADERS = {
     "review": ["Lead ID", "Decision", "Segment", "Business", "Fit", "Fit Reason", "Email", "Subject",
                "First Line", "QA", "Website"],
     "dashboard": ["Metric", "Value"],
+    "runs": ["Started (local)", "Job", "OK", "Seconds", "Main numbers", "First error"],
     "dnc": ["Value", "Reason", "Added"],
     "call_list": ["Company Name", "City", "Owner Name", "Phone", "Reviews", "Notes", "Website"],
 }
