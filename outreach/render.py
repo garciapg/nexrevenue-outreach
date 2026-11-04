@@ -89,7 +89,15 @@ def render_step(lead: dict, cfg: dict, template: str) -> tuple[str | None, str]:
     return subject, "\n\n".join(p for p in [body, sig_text, foot] if p)
 
 
-def render_email(lead: dict, cfg: dict, template: str) -> tuple[str | None, str, str | None]:
+def pixel(cfg: dict, lead: dict, step: int | None) -> str:
+    send = (cfg.get("blocks") or {}).get("send") or {}
+    url = send.get("open_pixel_url")
+    if not (send.get("track_opens") and url and lead.get("id") and step):
+        return ""
+    return f'<img src="{url}?t={lead["id"]}&s={step}" width="1" height="1" alt="" style="display:block;border:0">'
+
+
+def render_email(lead: dict, cfg: dict, template: str, step: int | None = None) -> tuple[str | None, str, str | None]:
     """(subject, plain text, html). The html version carries the designed signature. URLs stay plain text
     (no <a> tags we add ourselves)."""
     subject, body, sig_text, sig_html, foot = _parts(lead, cfg, template)
@@ -100,7 +108,7 @@ def render_email(lead: dict, cfg: dict, template: str) -> tuple[str | None, str,
     paras = "".join(f"<div>{esc(p)}</div><br>" for p in body.split("\n\n"))
     foot_html = f'<div style="font-size:12px;color:#666">{esc(foot)}</div>' if foot else ""
     html = (f'<div style="font-family:Arial,sans-serif;font-size:14px;color:#222">{paras}{sig_html}<br>'
-            f"{foot_html}</div>")
+            f"{foot_html}{pixel(cfg, lead, step)}</div>")
     return subject, plain, html
 
 

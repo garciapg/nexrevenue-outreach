@@ -21,7 +21,7 @@ def _subject(lead: dict, step: dict, rendered_subject: str | None) -> str:
 
 def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
     gmail = ctx.client("gmail")
-    rendered_subject, body, html = render_email(lead, ctx.cfg, step["template"])
+    rendered_subject, body, html = render_email(lead, ctx.cfg, step["template"], step["step"])
     subject = _subject(lead, step, rendered_subject)
     follow_up = step["step"] > 1
     thread = lead.get("gmail_thread_id") if follow_up else None
@@ -33,7 +33,8 @@ def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
         out = gmail.send(lead["email"], subject, body, thread, reply_to, html)
         nxt = _next_step(ctx, lead, step["step"])
         ctx.repo.add_message(lead["id"], "out", "sent", step=step["step"], gmail_id=out["message_id"],
-                             thread_id=out["thread_id"], subject=subject, body=body)
+                             thread_id=out["thread_id"], subject=subject, body=body, template=step["template"],
+                             sent_at=now_utc())
         ctx.move(lead, "send", "email_sent_auto", S.SENT, provider=provider, changes={
             "step": step["step"], "gmail_thread_id": out["thread_id"], "sent_at": now_utc(),
             "first_subject": subject if step["step"] == 1 else lead.get("first_subject"),
@@ -43,7 +44,7 @@ def _deliver(ctx, cfg: dict, lead: dict, step: dict, provider: str) -> None:
         return
     out = gmail.create_draft(lead["email"], subject, body, thread, reply_to, html)
     ctx.repo.add_message(lead["id"], "out", "draft", step=step["step"], gmail_id=out["message_id"],
-                         thread_id=out["thread_id"], subject=subject, body=body)
+                         thread_id=out["thread_id"], subject=subject, body=body, template=step["template"])
     ctx.move(lead, "send", "draft_created", S.DRAFTED, provider=provider, changes={
         "step": step["step"], "draft_id": out["draft_id"], "gmail_thread_id": out["thread_id"] or thread,
         "first_subject": subject if step["step"] == 1 else lead.get("first_subject")},

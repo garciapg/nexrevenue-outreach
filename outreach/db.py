@@ -124,9 +124,10 @@ class Repo:
     def add_message(self, lead_id: str, direction: str, kind: str, **kw: Any) -> None:
         self.conn.execute(
             "insert into outreach.messages (lead_id, direction, kind, step, gmail_id, thread_id, rfc_id,"
-            " subject, body) values (%s,%s,%s,%s,%s,%s,%s,%s,%s) on conflict (gmail_id) do nothing",
+            " subject, body, template, sent_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+            " on conflict (gmail_id) do nothing",
             (lead_id, direction, kind, kw.get("step"), kw.get("gmail_id"), kw.get("thread_id"),
-             kw.get("rfc_id"), kw.get("subject"), kw.get("body")),
+             kw.get("rfc_id"), kw.get("subject"), kw.get("body"), kw.get("template"), kw.get("sent_at")),
         )
 
     def seen_message(self, gmail_id: str) -> bool:
