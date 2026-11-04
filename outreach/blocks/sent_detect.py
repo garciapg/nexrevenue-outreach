@@ -43,8 +43,11 @@ def run(ctx, cfg: dict) -> dict:
             wait = nxt["day"] if nxt else COMPLETE_AFTER_DAYS
             subject = header(sent, "Subject")
             if not ctx.dry_run:
+                used = ctx.repo.query("select template from outreach.messages where lead_id = %s and kind = 'draft' "
+                                      "and step = %s order by at desc limit 1", (lead["id"], step))
                 ctx.repo.add_message(lead["id"], "out", "sent", step=step, gmail_id=sent["id"],
-                                     thread_id=sent.get("threadId"), rfc_id=header(sent, "Message-ID"), subject=subject)
+                                     thread_id=sent.get("threadId"), rfc_id=header(sent, "Message-ID"), subject=subject,
+                                     template=used[0]["template"] if used else None, sent_at=sent_at)
             ctx.move(lead, "sent_detect", "email_sent", S.SENT, provider="gmail", changes={
                 "sent_at": sent_at, "last_touch_at": sent_at, "draft_id": None,
                 "emails_sent": int(lead.get("emails_sent") or 0) + 1,

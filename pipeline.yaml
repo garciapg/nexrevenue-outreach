@@ -26,16 +26,16 @@ segments:
   agency:
     label: Final expense agencies and IMOs
     sequence: [                          # day = days after the previous email was SENT
-      {step: 1, template: agency/email1.md, day: 0},
-      {step: 2, template: agency/email2.md, day: 3},
-      {step: 3, template: agency/email3.md, day: 5}
+      {step: 1, template: agency/v2/email1.md, day: 0},   # v2: problem first, one cheap question
+      {step: 2, template: agency/v2/email2.md, day: 3},
+      {step: 3, template: agency/v2/email3.md, day: 5}
     ]
   buyer:
     label: Platforms buying FE calls, leads or live transfers (RTB first)
     sequence: [
-      {step: 1, template: buyer/email1.md, day: 0},
-      {step: 2, template: buyer/email2.md, day: 4},
-      {step: 3, template: buyer/email3.md, day: 6}
+      {step: 1, template: buyer/v2/email1.md, day: 0},
+      {step: 2, template: buyer/v2/email2.md, day: 4},
+      {step: 3, template: buyer/v2/email3.md, day: 6}
     ]
 
 blocks:
@@ -131,7 +131,7 @@ blocks:
     provider: mx_only                    # mx_only (free) | email_sleuth (needs port 25) | millionverifier
     batch: 100
   personalize:
-    provider: claude
+    provider: template_only              # v2 emails have no personalized opener (claude = AI first line, v1)
     model: writer
     batch: 20                            # Sonnet only for leads that passed everything else
     per_call: 5
@@ -144,7 +144,9 @@ blocks:
   send:
     provider: gmail_drafts               # gmail_drafts | gmail_auto | (phase 3: instantly)
     daily_cap: 20
-    contact_gap_days: 2                  # wait this long between emails to different people at one company
+    contact_gap_days: 2
+    track_opens: true                    # 1x1 image in each email; opens show on the Dashboard per template
+    open_pixel_url: https://hllisfcldjnbjmidpfdf.supabase.co/functions/v1/nr-open                  # wait this long between emails to different people at one company
     business_hours: [9, 17]
   sent_detect:
     provider: gmail

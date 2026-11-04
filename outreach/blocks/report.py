@@ -142,9 +142,21 @@ def metrics(repo, cfg: dict | None = None) -> list[list]:
     warm = _one(repo, "select count(*) n from outreach.leads where reply_category in ('interested','question','referral') "
                       "and replied_at >= %s", (week,))
     bounced = _events(repo, ("bounced",), week)
-    rows += [["", ""], ["LAST 7 DAYS", ""], ["  Emails sent", sent], ["  Replies", replies], ["  Warm replies", warm],
+    opened = _one(repo, "select count(distinct m.lead_id) n from outreach.messages m join outreach.opens o "
+                        "on o.lead_id = m.lead_id and o.step = m.step and o.at > coalesce(m.sent_at, m.at) + interval '1 minute' "
+                        "where m.kind = 'sent' and coalesce(m.sent_at, m.at) >= %s", (week,))
+    rows += [["", ""], ["LAST 7 DAYS", ""], ["  Emails sent", sent],
+             ["  Open rate %", round(100 * opened / sent, 1) if sent else 0],
+             ["  Replies", replies], ["  Warm replies", warm],
              ["  Reply rate %", round(100 * replies / sent, 1) if sent else 0],
              ["  Bounce rate %", round(100 * bounced / sent, 1) if sent else 0]]
+
+    rows += [["", ""], ["FIRST EMAIL BY TEMPLATE, 30 DAYS (sent | open % | reply %)", ""]]
+    for r in email_performance(repo):
+        rows.append([f"  {r['template'] or 'before tracking (v1)'}",
+                     f"{r['sent']} | {round(100 * r['opened'] / r['sent'], 1) if r['sent'] else 0}% | "
+                     f"{round(100 * r['replied'] / r['sent'], 1) if r['sent'] else 0}%"])
+    rows.append(["  (opens are approximate: Apple Mail opens everything, some apps block images)", ""])
 
     rows += [["", ""], ["LAST RUN OF EACH JOB", ""]]
     for job in JOBS_TO_WATCH:
@@ -152,6 +164,20 @@ def metrics(repo, cfg: dict | None = None) -> list[list]:
                        "order by started_at desc limit 1", (job,))
         rows.append([f"  {job}", f"{_local(r[0]['started_at'], tz)}  {'ok' if r[0]['ok'] else 'errors'}" if r else "never"])
     return rows
+
+
+def email_performance(repo, days: int = 30) -> list[dict]:
+    """Per first-email template: leads sent, opened after the send, replied after the send."""
+    return repo.query(
+        "with s as (select lead_id, template, min(coalesce(sent_at, at)) sent from outreach.messages "
+        " where direction = 'out' and kind = 'sent' and step = 1 and coalesce(sent_at, at) > now() - make_interval(days => %s)"
+        " group by 1, 2) "
+        "select template, count(*) sent,"
+        " count(*) filter (where exists (select 1 from outreach.opens o where o.lead_id = s.lead_id and o.step = 1"
+        "   and o.at > s.sent + interval '1 minute')) opened,"
+        " count(*) filter (where exists (select 1 from outreach.events e where e.lead_id = s.lead_id"
+        "   and e.type = 'reply_received' and e.at > s.sent)) replied "
+        "from s group by 1 order by 1 nulls first", (days,))
 
 
 def runs_table(repo, tz: str) -> list[list]:
