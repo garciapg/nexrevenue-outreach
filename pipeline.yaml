@@ -26,16 +26,16 @@ segments:
   agency:
     label: Final expense agencies and IMOs
     sequence: [                          # day = days after the previous email was SENT
-      {step: 1, template: agency/v2/email1.md, day: 0},   # v2: problem first, one cheap question
-      {step: 2, template: agency/v2/email2.md, day: 3},
-      {step: 3, template: agency/v2/email3.md, day: 5}
+      {step: 1, template: agency/v3/email1.md, day: 0},   # v3: short and simple (v2 kept for comparison)
+      {step: 2, template: agency/v3/email2.md, day: 3},
+      {step: 3, template: agency/v3/email3.md, day: 5}
     ]
   buyer:
     label: Platforms buying FE calls, leads or live transfers (RTB first)
     sequence: [
-      {step: 1, template: buyer/v2/email1.md, day: 0},
-      {step: 2, template: buyer/v2/email2.md, day: 4},
-      {step: 3, template: buyer/v2/email3.md, day: 6}
+      {step: 1, template: buyer/v3/email1.md, day: 0},
+      {step: 2, template: buyer/v3/email2.md, day: 4},
+      {step: 3, template: buyer/v3/email3.md, day: 6}
     ]
 
 blocks:

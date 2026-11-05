@@ -100,7 +100,7 @@ def test_full_cycle(env):
     by = leads_by_name(repo)
     agency = by["Insure Final Expense"]
     draft = gmail.drafts[agency["draft_id"]]
-    assert draft["_body"].startswith("Hey Maria,") and "Is lead quality a problem" in draft["_body"]   # v2 copy
+    assert draft["_body"].startswith("Hey Maria,") and "Is lead quality a problem" in draft["_body"]   # v3 copy
     assert "nr-open?t=" in draft["_html"]                                                          # open pixel
     assert "1505 Brentwood Dr, Kissimmee, FL 34746" in draft["_body"] and "{{" not in draft["_body"]
     assert "123 Test St" not in draft["_body"]            # the signature already carries the address
@@ -108,7 +108,7 @@ def test_full_cycle(env):
     assert draft["_html"] and 'href="https://seniorcoverageamerica' not in draft["_html"]   # URL stays plain text
     assert "Senior Media Buyer" in draft["_html"] and "googleusercontent" in draft["_html"]
     subj = next(h["value"] for h in draft["payload"]["headers"] if h["name"] == "Subject")
-    assert subj == "leads asking for free stuff?"
+    assert subj == "fex calls or leads?"
 
     # Pablo sends the agency draft; the buyer draft stays a draft.
     gmail.user_sends_draft(agency["draft_id"])

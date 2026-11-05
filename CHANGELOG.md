@@ -2,6 +2,7 @@
 
 One line per change: date, what changed, why. Newest first.
 
+- 2026-11-05: v3 emails (templates/*/v3): short and simple, "Hey!" opener, one line ask, then the funnel and one question (Pablo's example). New {{greeting}} variable: "Hey Maria," only when the first name is certain, otherwise "Hey!" (skips titles, generic words like info or sales, single letters, words that are in the company name). Reply drafts use the same name rule. Sequences now use v3, v2 kept for comparison.
 - 2026-11-03: v2 emails (templates/*/v2): problem first (freebie and state program leads, up and down volume), outcome (50+ inbound calls a day), one cheap question, under 70 words, short lowercase subjects, no AI opener (personalize: template_only). Open tracking pixel (Supabase function nr-open, table outreach.opens, send.track_opens) and per-template sent / open % / reply % on the Dashboard. v1 templates kept for comparison.
 - 2026-11-03: Fix: every run failed at the migration step once a company had two contacts (001 re-created the one-per-domain index). Migrations are now applied once each and recorded in outreach.schema_migrations. Visibility: Dashboard tab rebuilt every watch run (health, waiting on you, today, pipeline, lead gen, 7 days, last run per job), new Runs tab, one alert email per problem per day, daily summary only once after 6pm.
 - 2026-11-03: GitHub skipped the 6:00, 6:30 and 7:00 runs and started the 2am run 7 hours late, so the half-hourly watch job now also does the morning work (intake, write, drafts). Leadgen: 2 searches a night, batches of 100.

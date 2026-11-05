@@ -11,6 +11,7 @@ import re
 
 from .. import prompts
 from .. import statuses as S
+from ..render import first_name
 from ..integrations.gmail import header, plain_text, sender_email
 from ..timeutil import add_business_days, now_utc
 
@@ -118,7 +119,7 @@ def _answer_draft(ctx, lead: dict, msg: dict, text: str, category: str) -> None:
     owner = ctx.cfg.get("owner") or {}
     system, version = prompts.load("reply_draft")
     payload = {"their_reply": text, "category": category, "business": lead.get("business_name"),
-               "contact_first_name": (lead.get("contact_name") or "").split(" ")[0],
+               "contact_first_name": first_name(lead),
                "segment": lead.get("segment"), "booking_link": owner.get("booking_link") or "",
                "sender": owner.get("name", "Pablo")}
     answer = ctx.client("llm").ask_json(system, dumps(payload), ctx.model("replies"))
