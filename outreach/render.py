@@ -32,15 +32,44 @@ def load_template(path: str) -> tuple[str | None, str]:
     return None, text
 
 
+# Words that show up in a contact field but are not a first name. When in doubt we use no name at all.
+NOT_NAMES = {
+    "info", "admin", "administrator", "sales", "team", "office", "support", "contact", "hello", "hi", "mail",
+    "agent", "agents", "agency", "insurance", "owner", "manager", "president", "ceo", "broker", "staff",
+    "service", "services", "customer", "customers", "leads", "lead", "marketing", "media", "group", "inc",
+    "llc", "final", "expense", "life", "senior", "seniors", "benefits", "financial", "the", "none", "na",
+    "unknown", "test",
+}
+HONORIFICS = {"mr", "mrs", "ms", "miss", "dr", "prof"}
+
+
 def first_name(lead: dict) -> str:
-    name = (lead.get("contact_name") or "").strip().split(" ")[0]
-    return name.title() if name and name.isalpha() else ""
+    """A first name we are sure about, or "". Skips titles, generic words, single letters, anything that is
+    also a word in the company name, and names with digits or symbols."""
+    tokens = (lead.get("contact_name") or "").replace(".", " ").split()
+    while tokens and tokens[0].lower() in HONORIFICS:
+        tokens.pop(0)
+    if not tokens:
+        return ""
+    name = tokens[0]
+    low = name.lower()
+    company_words = set(re.findall(r"[a-z]+", (lead.get("business_name") or "").lower()))
+    if not name.isalpha() or len(name) < 2 or low in NOT_NAMES or low in company_words:
+        return ""
+    return name.title()
+
+
+def greeting(lead: dict) -> str:
+    """"Hey Maria," when the name is certain, otherwise "Hey!"."""
+    name = first_name(lead)
+    return f"Hey {name}," if name else "Hey!"
 
 
 def values_for(lead: dict, cfg: dict) -> dict:
     owner = cfg.get("owner") or {}
     return {
         "first_name": first_name(lead),
+        "greeting": greeting(lead),
         "company": lead.get("business_name"),
         "city": lead.get("city"),
         "state": lead.get("state"),
