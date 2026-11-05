@@ -130,10 +130,10 @@ def test_full_cycle(env):
     fu = gmail.drafts[agency["draft_id"]]
     assert fu["threadId"] == agency["gmail_thread_id"]
     heads = {h["name"]: h["value"] for h in fu["payload"]["headers"]}
-    assert heads["Subject"] == "Re: leads asking for free stuff?" and heads["In-Reply-To"] == agency["last_rfc_id"]
+    assert heads["Subject"] == "Re: fex calls or leads?" and heads["In-Reply-To"] == agency["last_rfc_id"]
 
     # ---- reply arrives ---------------------------------------------------------------
-    gmail.inbound("maria@insurefinalexpense.com", "Re: leads asking for free stuff?",
+    gmail.inbound("maria@insurefinalexpense.com", "Re: fex calls or leads?",
                   "Yes send me the funnel\n\nOn Mon, Pablo wrote:\n> hi", agency["gmail_thread_id"])
     out = run_job("watch", cfg, repo, clients=c, only=["sent_detect", "replies", "crm"])
     assert not out["errors"], out["errors"]
